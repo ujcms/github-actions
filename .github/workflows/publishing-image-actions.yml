@@ -29,9 +29,9 @@ jobs:
           echo "GITHUB_REF_NAME: $GITHUB_REF_NAME"
 
           VERSION="${GITHUB_REF_NAME#v}"
-          MAJOR=$(echo $VERSION | cut -d. -f1)
-          MINOR=$(echo $VERSION | cut -d. -f2)
-          MINOR=$(echo $VERSION | cut -d. -f3)
+          MAJOR=$(echo "$VERSION" | cut -d'.' -f1)
+          MINOR=$(echo "$VERSION" | cut -d'.' -f2)
+          PATCH=$(echo "$VERSION" | cut -d'.' -f3)
 
           echo "VERSION: $VERSION"
           echo "MAJOR: $MAJOR"
@@ -63,13 +63,11 @@ jobs:
       - name: Show variables
         id: show
         run: |
+          echo "GITHUB_REF_NAME: $GITHUB_REF_NAME"
           echo "VERSION: ${{ steps.version.outputs.version }}"
           echo "MAJOR: ${{ steps.version.outputs.major }}"
           echo "MINOR: ${{ steps.version.outputs.minor }}"
           echo "PATCH: ${{ steps.version.outputs.patch }}"
-          
-          echo "LATEST: ${{ steps.version.outputs.latest }}"
-          echo "MAJOR_LATEST: ${{ steps.version.outputs.major_latest }}"
 
           echo "is_latest: ${{ steps.version.outputs.is_latest }}"
           echo "is_major_latest: ${{ steps.version.outputs.is_major_latest }}"
