@@ -105,8 +105,6 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}},enable=${{ steps.version.outputs.is_major_latest }}
             type=raw,value=latest,enable=${{ steps.version.outputs.is_latest }}
-          # flavor: |
-          #   latest=<auto|true|false>
 
       - name: Build and push Docker images
         id: push
