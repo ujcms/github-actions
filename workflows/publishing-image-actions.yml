@@ -19,6 +19,44 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          tags: true
+
+      - name: Extract version info
+        id: version
+        run: |
+          VERSION="${GITHUB_REF##*/}"
+          VERSION="${VERSION#v}"
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+
+          echo "version: $VERSION"
+          echo "major: $MAJOR"
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+
+      - name: Check if current is latest or latest major
+        id: check
+        run: |
+          CURRENT="v${{ steps.version.outputs.version }}"
+          LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+          MAJOR_LATEST=$(git tag --sort=-v:refname | grep -E "^v${{ steps.version.outputs.major }}\.[0-9]+\.[0-9]+$" | head -n1)
+
+          echo "current: $CURRENT"
+          echo "latest: $LATEST"
+          echo "major_latest: $MAJOR_LATEST"
+
+          echo "is_latest=false" >> $GITHUB_OUTPUT
+          echo "is_major_latest=false" >> $GITHUB_OUTPUT
+
+          if [ "$CURRENT" = "$LATEST" ]; then
+            echo "is_latest=true" >> $GITHUB_OUTPUT
+          fi
+
+          if [ "$CURRENT" = "$MAJOR_LATEST" ]; then
+            echo "is_major_latest=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -49,7 +87,10 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{major}},enable=${{ steps.check.outputs.is_major_latest }}
+            type=raw,value=latest,enable=${{ steps.check.outputs.is_latest }}
+          # flavor: |
+          #   latest=<auto|true|false>
 
       - name: Build and push Docker images
         id: push
