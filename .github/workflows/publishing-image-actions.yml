@@ -23,40 +23,56 @@ jobs:
           fetch-depth: 0
           tags: true
 
-      - name: Extract version info
+      - name: Extract version and check if current is latest or latest major
         id: version
         run: |
-          VERSION="${GITHUB_REF##*/}"
-          VERSION="${VERSION#v}"
-          MAJOR=$(echo $VERSION | cut -d. -f1)
+          echo "GITHUB_REF_NAME: $GITHUB_REF_NAME"
 
-          echo "version: $VERSION"
-          echo "major: $MAJOR"
+          VERSION="${GITHUB_REF_NAME#v}"
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          MINOR=$(echo $VERSION | cut -d. -f3)
+
+          echo "VERSION: $VERSION"
+          echo "MAJOR: $MAJOR"
+          echo "MINOR: $MINOR"
+          echo "PATCH: $PATCH"
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "major=$MAJOR" >> $GITHUB_OUTPUT
+          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+          echo "patch=$PATCH" >> $GITHUB_OUTPUT
 
-      - name: Check if current is latest or latest major
-        id: check
-        run: |
-          CURRENT="v${{ steps.version.outputs.version }}"
           LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
-          MAJOR_LATEST=$(git tag --sort=-v:refname | grep -E "^v${{ steps.version.outputs.major }}\.[0-9]+\.[0-9]+$" | head -n1)
+          MAJOR_LATEST=$(git tag --sort=-v:refname | grep -E "^v$MAJOR\.[0-9]+\.[0-9]+$" | head -n1)
 
-          echo "current: $CURRENT"
-          echo "latest: $LATEST"
-          echo "major_latest: $MAJOR_LATEST"
-
+          echo "LATEST: $LATEST"
+          echo "MAJOR_LATEST: $MAJOR_LATEST"
+          
           echo "is_latest=false" >> $GITHUB_OUTPUT
           echo "is_major_latest=false" >> $GITHUB_OUTPUT
 
-          if [ "$CURRENT" = "$LATEST" ]; then
+          if [ "$VERSION" = "$LATEST" ]; then
             echo "is_latest=true" >> $GITHUB_OUTPUT
           fi
 
-          if [ "$CURRENT" = "$MAJOR_LATEST" ]; then
+          if [ "$VERSION" = "$MAJOR_LATEST" ]; then
             echo "is_major_latest=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Show variables
+        id: show
+        run: |
+          echo "VERSION: ${{ steps.version.outputs.version }}"
+          echo "MAJOR: ${{ steps.version.outputs.major }}"
+          echo "MINOR: ${{ steps.version.outputs.minor }}"
+          echo "PATCH: ${{ steps.version.outputs.patch }}"
+          
+          echo "LATEST: ${{ steps.version.outputs.latest }}"
+          echo "MAJOR_LATEST: ${{ steps.version.outputs.major_latest }}"
+
+          echo "is_latest: ${{ steps.version.outputs.is_latest }}"
+          echo "is_major_latest: ${{ steps.version.outputs.is_major_latest }}"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -87,8 +103,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}},enable=${{ steps.check.outputs.is_major_latest }}
-            type=raw,value=latest,enable=${{ steps.check.outputs.is_latest }}
+            type=semver,pattern={{major}},enable=${{ steps.version.outputs.is_major_latest }}
+            type=raw,value=latest,enable=${{ steps.version.outputs.is_latest }}
           # flavor: |
           #   latest=<auto|true|false>
 
